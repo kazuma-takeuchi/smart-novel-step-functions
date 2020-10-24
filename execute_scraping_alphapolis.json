@@ -1,0 +1,53 @@
+{
+    "StartAt": "GetRecentNovel",
+    "States": {
+        "GetRecentNovel": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:ap-northeast-1:901785476089:function:extract-recent-novel-alphapolis",
+            "InputPath": "$",
+            "OutputPath": "$",
+            "Next": "MapScraping"
+        },
+        "MapScraping": {
+            "Type": "Map",
+            "InputPath": "$",
+            "ItemsPath": "$.links",
+            "ResultPath": "$.out",
+            "MaxConcurrency": 5,
+            "Iterator": {
+                "StartAt": "ExecuteScraping",
+                "States": {
+                    "ExecuteScraping": {
+                        "Type": "Task",
+                        "Resource": "arn:aws:lambda:ap-northeast-1:901785476089:function:scrape-alphapolis",
+                        "InputPath": "$",
+                        "Parameters": {
+                            "url.$": "$"
+                        },
+                        "OutputPath": "$",
+                        "Next": "InsertNovel"
+                    },
+                    "InsertNovel": {
+                        "Type": "Task",
+                        "Resource": "arn:aws:lambda:ap-northeast-1:901785476089:function:insert-novel2elasticsearch",
+                        "InputPath": "$",
+                        "OutputPath": "$",
+                        "End": true
+                    }
+                }
+            },
+            "Next": "UpdateLastkey"
+        },
+        "UpdateLastkey": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:ap-northeast-1:901785476089:function:update-lastkey",
+            "InputPath": "$",
+            "Parameters": {
+                "pkey.$": "$.pkey",
+                "skey.$": "$.skey",
+                "lastkey.$": "$.lastkey"
+            },
+            "End": true
+        }
+    }
+}
